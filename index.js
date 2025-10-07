@@ -1,3 +1,16 @@
+app.get('/', (req, res) => {
+  res.send(`
+    <h1>🎄 API de Agenda de Natal</h1>
+    <p>✅ O servidor está rodando!</p>
+    <p>Use as rotas:</p>
+    <ul>
+      <li>GET /agenda/:dia</li>
+      <li>POST /agendar</li>
+      <li>POST /liberar</li>
+    </ul>
+  `);
+});
+
 const express = require('express');
 const fs = require('fs');
 const path = require('path');

@@ -114,7 +114,18 @@ button { background:var(--primary); color:#fff; border:none; padding:6px 10px; b
 .modal-footer { display:flex; justify-content:flex-end; gap:8px; padding:12px 16px; border-top:1px solid #f0f0f0; }
 .btn-secondary { background:#f0f0f0; color:#222; border-radius:8px; padding:8px 12px; cursor:pointer; }
 .btn-primary { background:var(--primary); color:#fff; border-radius:8px; padding:8px 12px; cursor:pointer; border:none; }
-
+/* botão de exportar */
+.btn-export {
+  background: linear-gradient(180deg, #3b6fb0, #2a4d8f);
+  color: #fff;
+  border: none;
+  padding: 8px 12px;
+  border-radius: 8px;
+  cursor: pointer;
+  margin-left: 8px;
+  font-weight:600;
+}
+.btn-export:hover { opacity: 0.95; }
 .modal-error { color:var(--danger); min-height:18px; font-size:13px; }
 
 /* required mark */
@@ -126,3 +137,4 @@ button { background:var(--primary); color:#fff; border:none; padding:6px 10px; b
   #monthLabel { min-width:140px; font-size:14px; }
   .modal { max-width: 94%; }
 }
+

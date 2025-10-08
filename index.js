@@ -89,26 +89,29 @@ app.post('/liberar', (req, res) => {
     return res.json({ mensagem: `✅ Horário ${hora} de ${dia} liberado (cliente ${cliente})` });
 });
 
-// Lista apenas os dias que têm pelo menos um horário ocupado
+// Lista os dias que têm agendamentos + quantidade de horários ocupados
 app.get('/dias', (req, res) => {
   try {
     const arquivos = fs.readdirSync(DATA_DIR);
-    const diasComAgendamento = [];
+    const dias = [];
 
     for (const arquivo of arquivos) {
       if (!arquivo.endsWith('.json')) continue;
 
       const filePath = path.join(DATA_DIR, arquivo);
       const data = JSON.parse(fs.readFileSync(filePath, 'utf-8'));
-      const temAgendamento = Object.values(data).some(valor => valor !== null);
+      const ocupados = Object.values(data).filter(v => v !== null).length;
 
-      if (temAgendamento) {
-        diasComAgendamento.push(arquivo.replace('.json', ''));
+      if (ocupados > 0) {
+        dias.push({
+          dia: arquivo.replace('.json', ''),
+          agendamentos: ocupados
+        });
       }
     }
 
-    diasComAgendamento.sort();
-    res.json({ dias: diasComAgendamento });
+    dias.sort((a, b) => a.dia.localeCompare(b.dia));
+    res.json({ dias });
   } catch (err) {
     console.error(err);
     res.status(500).json({ erro: 'Erro ao listar dias com agendamentos' });

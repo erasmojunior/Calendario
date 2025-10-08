@@ -1,7 +1,5 @@
 const API_URL = "https://calendario-51xg.onrender.com";
 
-const API_URL = "https://SEU-ENDERECO-DO-RENDER.onrender.com"; // <--- ajuste aqui
-
 // elementos
 const calendarEl = document.getElementById('calendar');
 const monthLabel = document.getElementById('monthLabel');

@@ -1,5 +1,4 @@
-// script.js (versão revisada)
-// Ajuste API_URL: '' se o front for servido pelo mesmo servidor/back-end.
+// script.js (modal de agendamento integrado)
 const API_URL = "https://calendario-51xg.onrender.com";
 
 const calendarEl = document.getElementById('calendar');
@@ -12,31 +11,42 @@ const selectedDayTitle = document.getElementById('selectedDayTitle');
 const tbody = document.querySelector('#agenda tbody');
 const msg = document.getElementById('mensagem');
 
+const modalOverlay = document.getElementById('modalOverlay');
+const modal = document.getElementById('modal');
+const modalForm = document.getElementById('modalForm');
+const modalDia = document.getElementById('modalDia');
+const modalHora = document.getElementById('modalHora');
+const modalDate = document.getElementById('modalDate');
+const modalHour = document.getElementById('modalHour');
+const modalCliente = document.getElementById('modalCliente');
+const modalObs = document.getElementById('modalObs');
+const modalError = document.getElementById('modalError');
+const modalClose = document.getElementById('modalClose');
+const modalCancel = document.getElementById('modalCancel');
+const modalSubmit = document.getElementById('modalSubmit');
+
 let scheduledDays = new Set();
 let current = new Date();
 let selectedDate = null;
 let isBusy = false;
+let lastFocusedBeforeModal = null;
 
 init();
 
 async function init() {
-  // seta datePicker com hoje
   datePicker.value = toISODate(new Date());
   await fetchScheduledDays();
   renderCalendar(current);
   attachEvents();
+  attachModalEvents();
 }
 
 async function fetchScheduledDays() {
   try {
     const res = await fetch(`${API_URL}/dias`);
-    if (!res.ok) {
-      console.warn('fetch /dias retornou', res.status);
-      scheduledDays = new Set();
-      return;
-    }
+    if (!res.ok) { scheduledDays = new Set(); return; }
     const j = await res.json();
-    const arr = Array.isArray(j.dias) ? j.dias : (j.dias || j);
+    const arr = Array.isArray(j.dias) ? j.dias : (j.dias || []);
     scheduledDays = new Set(Array.isArray(arr) ? arr : []);
   } catch (e) {
     console.error('Erro fetch /dias', e);
@@ -98,7 +108,6 @@ function renderCalendar(date) {
     cell.addEventListener('click', () => {
       selectedDate = dateStr;
       datePicker.value = dateStr;
-      // re-render para mostrar seleção visual
       renderCalendar(current);
       loadAgendaForDay(dateStr);
     });
@@ -124,7 +133,10 @@ async function loadAgendaForDay(dia) {
     const res = await fetch(`${API_URL}/agenda/${dia}`);
     if (!res.ok) {
       const body = await safeJson(res);
-      return showMessage(body.erro || (body.error && body.error.message) || `Erro ${res.status}`, false);
+      showMessage(body.erro || (body.error && body.error.message) || `Erro ${res.status}`, false);
+      tbody.innerHTML = '';
+      selectedDayTitle.textContent = '';
+      return;
     }
     const json = await res.json();
     selectedDayTitle.textContent = `Agenda de ${dia}`;
@@ -141,25 +153,18 @@ async function loadAgendaForDay(dia) {
 
 function exibirAgenda(agenda, dia) {
   tbody.innerHTML = '';
-  // garante ordem das horas
   const horas = Object.keys(agenda).sort();
   for (const hora of horas) {
     const clienteRaw = agenda[hora];
-    // aceita string ou objeto { cliente, createdAt } ou { nome: ... }
     let cliente = '';
     if (clienteRaw == null) cliente = null;
     else if (typeof clienteRaw === 'string') cliente = clienteRaw;
-    else if (typeof clienteRaw === 'object') {
-      cliente = clienteRaw.cliente || clienteRaw.nome || JSON.stringify(clienteRaw);
-    } else {
-      cliente = String(clienteRaw);
-    }
+    else if (typeof clienteRaw === 'object') cliente = clienteRaw.cliente || clienteRaw.nome || JSON.stringify(clienteRaw);
+    else cliente = String(clienteRaw);
 
     const tr = document.createElement('tr');
-    const tdHora = document.createElement('td');
-    tdHora.textContent = hora;
-    const tdCli = document.createElement('td');
-    tdCli.innerHTML = cliente ? escapeHtml(cliente) : '<i>livre</i>';
+    const tdHora = document.createElement('td'); tdHora.textContent = hora;
+    const tdCli = document.createElement('td'); tdCli.innerHTML = cliente ? escapeHtml(cliente) : '<i>livre</i>';
     const tdAcao = document.createElement('td');
 
     const btn = document.createElement('button');
@@ -167,23 +172,71 @@ function exibirAgenda(agenda, dia) {
     btn.disabled = isBusy;
     btn.addEventListener('click', () => {
       if (cliente) return liberar(dia, hora);
-      return agendarPrompt(dia, hora);
+      return openModalFor(dia, hora);
     });
 
     tdAcao.appendChild(btn);
-    tr.appendChild(tdHora);
-    tr.appendChild(tdCli);
-    tr.appendChild(tdAcao);
+    tr.appendChild(tdHora); tr.appendChild(tdCli); tr.appendChild(tdAcao);
     tbody.appendChild(tr);
   }
 }
 
-async function agendarPrompt(dia, hora) {
-  const cliente = prompt(`Nome do cliente para ${hora} em ${dia}:`);
-  if (!cliente) return;
-  await sendAgendar({ dia, hora, cliente });
+/* ------------------ Modal functions ------------------ */
+function attachModalEvents() {
+  modalClose.addEventListener('click', closeModal);
+  modalCancel.addEventListener('click', closeModal);
+  modalOverlay.addEventListener('click', (e) => {
+    if (e.target === modalOverlay) closeModal();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && modalOverlay && !modalOverlay.classList.contains('hidden')) closeModal();
+  });
+
+  modalForm.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    modalError.textContent = '';
+    const cliente = modalCliente.value && modalCliente.value.trim();
+    if (!cliente) {
+      modalError.textContent = 'Informe o nome do cliente.';
+      modalCliente.focus();
+      return;
+    }
+    const payload = {
+      dia: modalDia.value,
+      hora: modalHora.value,
+      cliente,
+      obs: modalObs.value && modalObs.value.trim()
+    };
+    await sendAgendar(payload);
+    closeModal();
+  });
 }
 
+function openModalFor(dia, hora) {
+  lastFocusedBeforeModal = document.activeElement;
+  modalDia.value = dia;
+  modalHora.value = hora;
+  modalDate.value = dia;
+  modalHour.value = hora;
+  modalCliente.value = '';
+  modalObs.value = '';
+  modalError.textContent = '';
+  modalOverlay.classList.remove('hidden');
+  modalOverlay.setAttribute('data-hidden', 'false');
+  // focus
+  setTimeout(() => modalCliente.focus(), 50);
+}
+
+function closeModal() {
+  modalOverlay.classList.add('hidden');
+  modalOverlay.setAttribute('data-hidden', 'true');
+  modalError.textContent = '';
+  if (lastFocusedBeforeModal && typeof lastFocusedBeforeModal.focus === 'function') {
+    lastFocusedBeforeModal.focus();
+  }
+}
+
+/* ------------------ API actions ------------------ */
 async function sendAgendar(payload) {
   setBusy(true);
   clearMessage();
@@ -218,12 +271,12 @@ async function liberar(dia, hora) {
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ dia, hora })
     });
-    const body = await safeJson(res);
+    const j = await safeJson(res);
     if (!res.ok) {
-      showMessage(body.erro || (body.error && body.error.message) || `Erro ${res.status}`, false);
+      showMessage(j.erro || (j.error && j.error.message) || `Erro ${res.status}`, false);
       return;
     }
-    showMessage(body.mensagem || 'Horário liberado', true);
+    showMessage(j.mensagem || 'Horário liberado', true);
     await refreshScheduledAndReload(dia);
   } catch (e) {
     console.error(e);
@@ -239,41 +292,23 @@ async function refreshScheduledAndReload(dia) {
   await loadAgendaForDay(dia);
 }
 
-// Helpers
+/* ------------------ Helpers ------------------ */
 function showMessage(text, ok = true) {
   msg.textContent = text || '';
   msg.style.color = ok ? '#2a8f4d' : '#b33';
 }
-function clearMessage() {
-  msg.textContent = '';
-}
+function clearMessage() { msg.textContent = ''; }
 function setBusy(v) {
   isBusy = !!v;
-  // desabilita botões principais enquanto ocupado
   prevBtn.disabled = v;
   nextBtn.disabled = v;
   loadDayBtn.disabled = v;
-  // desabilita inputs para evitar requisições paralelas
   datePicker.disabled = v;
-  // também desabilita botões dentro da tabela
   document.querySelectorAll('#agenda button').forEach(b => b.disabled = v);
 }
-
-// Tenta ler JSON mesmo quando status != 200
 async function safeJson(res) {
-  try {
-    return await res.json();
-  } catch (e) {
-    return {};
-  }
+  try { return await res.json(); } catch (e) { return {}; }
 }
-
-// escapa conteúdo simples para evitar injeção ao inserir innerHTML
 function escapeHtml(str) {
-  return String(str)
-    .replaceAll('&', '&amp;')
-    .replaceAll('<', '&lt;')
-    .replaceAll('>', '&gt;')
-    .replaceAll('"', '&quot;')
-    .replaceAll("'", '&#39;');
+  return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
 }

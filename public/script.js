@@ -24,12 +24,15 @@ const modalError = document.getElementById('modalError');
 const modalClose = document.getElementById('modalClose');
 const modalCancel = document.getElementById('modalCancel');
 const modalSubmit = document.getElementById('modalSubmit');
+const exportBtn = document.getElementById('exportImageBtn');
 
 let scheduledDays = new Set();
 let current = new Date();
 let selectedDate = null;
 let isBusy = false;
 let lastFocusedBeforeModal = null;
+let lastAgenda = null;
+let lastDia = null;
 
 init();
 
@@ -139,6 +142,9 @@ async function loadAgendaForDay(dia) {
       return;
     }
     const json = await res.json();
+     // <- AQUI: guarda os dados carregados para exportação
+    lastDia = dia;
+    lastAgenda = json.agenda || json || {};
     selectedDayTitle.textContent = `Agenda de ${dia}`;
     exibirAgenda(json.agenda || json || {}, dia);
   } catch (e) {
@@ -311,4 +317,110 @@ async function safeJson(res) {
 }
 function escapeHtml(str) {
   return String(str).replaceAll('&','&amp;').replaceAll('<','&lt;').replaceAll('>','&gt;').replaceAll('"','&quot;').replaceAll("'",'&#39;');
+}
+async function exportAgendaImage(dia, agenda) {
+  // configurações visuais
+  const slotKeys = Object.keys(agenda).sort();
+  const cols = 1; // só uma coluna vertical de horários
+  const slotH = 56; // altura de cada slot
+  const headerH = 80;
+  const legendH = 48;
+  const padding = 28;
+  const width = 900; // pixels (base)
+  const height = headerH + slotH * slotKeys.length + legendH + padding;
+
+  // suporte retina
+  const ratio = window.devicePixelRatio || 1;
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.round(width * ratio);
+  canvas.height = Math.round(height * ratio);
+  canvas.style.width = width + 'px';
+  canvas.style.height = height + 'px';
+
+  const ctx = canvas.getContext('2d');
+  ctx.scale(ratio, ratio);
+
+  // fundo
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(0, 0, width, height);
+
+  // título
+  ctx.fillStyle = '#2a4d8f';
+  ctx.font = '600 20px Arial';
+  ctx.textBaseline = 'top';
+  ctx.fillText(`Agenda — ${dia}`, padding, 12);
+
+  // subtítulo / legenda
+  ctx.font = '14px Arial';
+  ctx.fillStyle = '#444';
+  ctx.fillText(`Horários livres em verde — ocupados em vermelho`, padding, 40);
+
+  // draw slots
+  const x = padding;
+  let y = headerH - 10;
+
+  for (let i = 0; i < slotKeys.length; i++) {
+    const hora = slotKeys[i];
+    const slot = agenda[hora];
+    const isFree = slot == null;
+
+    // rect
+    const rectW = width - padding * 2;
+    const rectH = slotH - 8;
+    const rectX = x;
+    const rectY = y + i * slotH;
+
+    // cor
+    ctx.fillStyle = isFree ? '#e6ffed' : '#ffecec';
+    ctx.fillRect(rectX, rectY, rectW, rectH);
+
+    // border
+    ctx.strokeStyle = isFree ? '#9fe0a4' : '#f1a3a3';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rectX + 0.5, rectY + 0.5, rectW - 1, rectH - 1);
+
+    // hora à esquerda
+    ctx.fillStyle = '#222';
+    ctx.font = '600 15px Arial';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(hora, rectX + 12, rectY + rectH / 2);
+
+    // cliente no centro/direita
+    let clienteTxt = isFree ? 'LIVRE' : (typeof slot === 'string' ? slot : (slot.cliente || slot.nome || JSON.stringify(slot)));
+    // limitar tamanho texto
+    if (clienteTxt.length > 40) clienteTxt = clienteTxt.slice(0, 37) + '...';
+    ctx.font = '14px Arial';
+    ctx.fillStyle = isFree ? '#0a6f2b' : '#7a1313';
+    ctx.fillText(clienteTxt, rectX + 120, rectY + rectH / 2);
+  }
+
+  // legenda
+  const legX = padding;
+  const legY = headerH + slotKeys.length * slotH + 6;
+  const boxSize = 16;
+  // livre
+  ctx.fillStyle = '#e6ffed';
+  ctx.fillRect(legX, legY, boxSize, boxSize);
+  ctx.strokeStyle = '#9fe0a4';
+  ctx.strokeRect(legX + 0.5, legY + 0.5, boxSize - 1, boxSize - 1);
+  ctx.fillStyle = '#222';
+  ctx.font = '13px Arial';
+  ctx.fillText('Livre', legX + boxSize + 8, legY + 2);
+
+  // ocupado
+  ctx.fillStyle = '#ffecec';
+  ctx.fillRect(legX + 120, legY, boxSize, boxSize);
+  ctx.strokeStyle = '#f1a3a3';
+  ctx.strokeRect(legX + 120 + 0.5, legY + 0.5, boxSize - 1, boxSize - 1);
+  ctx.fillStyle = '#222';
+  ctx.fillText('Ocupado', legX + 120 + boxSize + 8, legY + 2);
+
+  // exporta
+  const dataUrl = canvas.toDataURL('image/png');
+  const a = document.createElement('a');
+  a.href = dataUrl;
+  a.download = `agenda-${dia}.png`;
+  document.body.appendChild(a);
+  a.click();
+  a.remove();
 }

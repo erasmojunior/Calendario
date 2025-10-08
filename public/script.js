@@ -400,9 +400,7 @@ async function exportAgendaImage(dia, agenda) {
     ctx.fillText(hora, rectX + 12, rectY + rectH / 2);
 
     // cliente no centro/direita
-    let clienteTxt = isFree ? 'LIVRE' : (typeof slot === 'string' ? slot : (slot.cliente || slot.nome || JSON.stringify(slot)));
-    // limitar tamanho texto
-    if (clienteTxt.length > 40) clienteTxt = clienteTxt.slice(0, 37) + '...';
+    let clienteTxt = isFree ? 'LIVRE' : 'Ocupado';
     ctx.font = '14px Arial';
     ctx.fillStyle = isFree ? '#0a6f2b' : '#7a1313';
     ctx.fillText(clienteTxt, rectX + 120, rectY + rectH / 2);

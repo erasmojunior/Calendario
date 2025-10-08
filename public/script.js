@@ -157,7 +157,6 @@ function renderCalendar(date) {
 
     calendarEl.appendChild(cell);
   }
-}
 
 // util helpers
 function toISODate(d) {

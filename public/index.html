@@ -11,9 +11,9 @@
 
   <div class="top">
     <div class="month-control">
-      <button id="prevMonth">&lt;</button>
-      <div id="monthLabel"></div>
-      <button id="nextMonth">&gt;</button>
+      <button id="prevMonth" aria-label="Mês anterior">&lt;</button>
+      <div id="monthLabel" aria-live="polite"></div>
+      <button id="nextMonth" aria-label="Próximo mês">&gt;</button>
     </div>
 
     <div class="actions">
@@ -22,15 +22,58 @@
     </div>
   </div>
 
-  <div id="calendar"></div>
+  <div id="calendar" aria-label="Calendário mensal"></div>
 
   <h2 id="selectedDayTitle"></h2>
-  <table id="agenda">
+  <table id="agenda" aria-live="polite">
     <thead><tr><th>Hora</th><th>Cliente</th><th>Ação</th></tr></thead>
     <tbody></tbody>
   </table>
 
-  <div id="mensagem"></div>
+  <div id="mensagem" role="status" aria-live="polite"></div>
+
+  <!-- Modal de Agendamento -->
+  <div id="modalOverlay" class="modal-overlay hidden" data-hidden="true">
+    <div id="modal" class="modal" role="dialog" aria-modal="true" aria-labelledby="modalTitle" tabindex="-1">
+      <header class="modal-header">
+        <h3 id="modalTitle">Agendar atendimento</h3>
+        <button id="modalClose" class="modal-close" aria-label="Fechar modal">✕</button>
+      </header>
+
+      <form id="modalForm" class="modal-form">
+        <input type="hidden" id="modalDia" name="dia" />
+        <input type="hidden" id="modalHora" name="hora" />
+        <div class="modal-body">
+          <label>
+            Data
+            <input type="date" id="modalDate" disabled />
+          </label>
+
+          <label>
+            Hora
+            <input type="text" id="modalHour" disabled />
+          </label>
+
+          <label>
+            Nome do cliente <span class="required">*</span>
+            <input type="text" id="modalCliente" required maxlength="100" autocomplete="name" />
+          </label>
+
+          <label>
+            Observações (opcional)
+            <textarea id="modalObs" rows="3" maxlength="500" placeholder="Ex.: preferência de horário, telefone"></textarea>
+          </label>
+
+          <div id="modalError" class="modal-error" aria-live="assertive"></div>
+        </div>
+
+        <footer class="modal-footer">
+          <button type="button" id="modalCancel" class="btn-secondary">Cancelar</button>
+          <button type="submit" id="modalSubmit" class="btn-primary">Confirmar agendamento</button>
+        </footer>
+      </form>
+    </div>
+  </div>
 
   <script src="script.js"></script>
 </body>

@@ -65,8 +65,22 @@ function attachEvents() {
     if (!v) return showMessage('Selecione uma data', false);
     loadAgendaForDay(v);
   });
-}
 
+  // handler do botão de exportar imagem
+  if (exportBtn) {
+    exportBtn.addEventListener('click', () => {
+      console.log('[export] clique detectado, lastDia=', lastDia, ' lastAgenda=', lastAgenda);
+      if (!lastDia || !lastAgenda) {
+        showMessage('Carregue uma agenda antes de exportar.', false);
+        return;
+      }
+      // chama a função que gera o PNG
+      exportAgendaImage(lastDia, lastAgenda);
+    });
+  } else {
+    console.warn('Botão exportImageBtn não encontrado no DOM');
+  }
+}
 function renderCalendar(date) {
   calendarEl.innerHTML = '';
   const year = date.getFullYear();

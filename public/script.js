@@ -11,7 +11,7 @@ const selectedDayTitle = document.getElementById('selectedDayTitle');
 const tbody = document.querySelector('#agenda tbody');
 const msg = document.getElementById('mensagem');
 
-let scheduledDays = new Set(); // conjunto de strings 'YYYY-MM-DD'
+let scheduledDays = new Map(); // chave = "YYYY-MM-DD", valor = nº de agendamentos
 let current = new Date(); // mês/ano mostrado
 let selectedDate = null;
 
@@ -29,16 +29,18 @@ async function fetchScheduledDays() {
   try {
     const res = await fetch(`${API_URL}/dias`);
     const j = await res.json();
+    scheduledDays = new Map();
     if (j.dias && Array.isArray(j.dias)) {
-      scheduledDays = new Set(j.dias);
-    } else {
-      scheduledDays = new Set();
+      j.dias.forEach(item => {
+        scheduledDays.set(item.dia, item.agendamentos);
+      });
     }
   } catch (e) {
     console.error('Erro fetch /dias', e);
-    scheduledDays = new Set();
+    scheduledDays = new Map();
   }
 }
+
 
 function attachEvents() {
   prevBtn.addEventListener('click', () => { current.setMonth(current.getMonth() - 1); renderCalendar(current); });
@@ -59,7 +61,7 @@ function renderCalendar(date) {
   const monthNames = ['Janeiro','Fevereiro','Março','Abril','Maio','Junho','Julho','Agosto','Setembro','Outubro','Novembro','Dezembro'];
   monthLabel.textContent = `${monthNames[month]} ${year}`;
 
-  // cabeçalho dos dias da semana
+  // cabeçalho dos dias
   const dayNames = ['Dom','Seg','Ter','Qua','Qui','Sex','Sáb'];
   for (let i=0;i<7;i++){
     const dn = document.createElement('div');
@@ -67,6 +69,48 @@ function renderCalendar(date) {
     dn.textContent = dayNames[i];
     calendarEl.appendChild(dn);
   }
+
+  const first = new Date(year, month, 1);
+  const startWeekDay = first.getDay();
+  const daysInMonth = new Date(year, month+1, 0).getDate();
+
+  for (let i=0;i<startWeekDay;i++){
+    const blank = document.createElement('div');
+    blank.className = 'dayCell';
+    blank.style.visibility = 'hidden';
+    calendarEl.appendChild(blank);
+  }
+
+  for (let d=1; d<=daysInMonth; d++) {
+    const cell = document.createElement('div');
+    cell.className = 'dayCell';
+    const cellDate = new Date(year, month, d);
+    const dateStr = toISODate(cellDate);
+
+    const today = new Date();
+    if (sameDay(cellDate, today)) cell.classList.add('today');
+
+    const agendamentos = scheduledDays.get(dateStr);
+    if (agendamentos) {
+      cell.classList.add('scheduled');
+    }
+
+    cell.innerHTML = `
+      <div class="dayNumber">${d}</div>
+      <div class="small">${dateStr}</div>
+      ${agendamentos ? `<div class="badge">${agendamentos} ag.</div>` : ''}
+    `;
+
+    cell.addEventListener('click', () => {
+      selectedDate = dateStr;
+      datePicker.value = dateStr;
+      loadAgendaForDay(dateStr);
+    });
+
+    calendarEl.appendChild(cell);
+  }
+}
+
 
   // primeiro dia do mês (0-dom ..6-sáb)
   const first = new Date(year, month, 1);

@@ -427,11 +427,11 @@ async function exportAgendaImage(dia, agenda) {
   ctx.fillStyle = '#222';
   ctx.fillText('Ocupado', legX + 120 + boxSize + 8, legY + 2);
 
-  // exporta
-  const dataUrl = canvas.toDataURL('image/png');
+// exporta como JPEG (simples)
+  const dataUrl = canvas.toDataURL('image/jpeg', 0.92); // qualidade entre 0.0 e 1.0
   const a = document.createElement('a');
   a.href = dataUrl;
-  a.download = `agenda-${dia}.png`;
+  a.download = `agenda-${dia}.jpg`;
   document.body.appendChild(a);
   a.click();
   a.remove();

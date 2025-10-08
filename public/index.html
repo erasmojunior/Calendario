@@ -1,25 +1,32 @@
 <!DOCTYPE html>
 <html lang="pt-BR">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Agenda de Atendimentos</title>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Agenda — Calendário</title>
   <link rel="stylesheet" href="style.css" />
 </head>
 <body>
   <h1>📅 Agenda de Atendimentos</h1>
 
-  <div class="controls">
-    <label for="dia">Data:</label>
-    <input type="date" id="dia" />
+  <div class="top">
+    <div class="month-control">
+      <button id="prevMonth">&lt;</button>
+      <div id="monthLabel"></div>
+      <button id="nextMonth">&gt;</button>
+    </div>
 
-    <button id="carregar">Carregar Agenda</button>
+    <div class="actions">
+      <input type="date" id="datePicker" />
+      <button id="loadDay">Carregar dia</button>
+    </div>
   </div>
 
+  <div id="calendar"></div>
+
+  <h2 id="selectedDayTitle"></h2>
   <table id="agenda">
-    <thead>
-      <tr><th>Hora</th><th>Cliente</th><th>Ação</th></tr>
-    </thead>
+    <thead><tr><th>Hora</th><th>Cliente</th><th>Ação</th></tr></thead>
     <tbody></tbody>
   </table>
 
